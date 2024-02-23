@@ -283,10 +283,10 @@ func (c *Client) retryConnect(dsn string) (*sql.DB, error) {
 		}
 		if err != nil {
 			errString := strings.Replace(err.Error(), c.config.Password, "XXXX", 2)
-			if i >= connectionRetries-1 {
+			if i > connectionRetries {
 				return nil, fmt.Errorf("error connecting to PostgreSQL server %s (scheme: %s): %s", c.config.Host, c.config.Scheme, errString)
 			}
-			fmt.Println(fmt.Errorf("attempt %d/%d: Error connecting to PostgreSQL server %s (scheme: %s): %s", i+1, connectionRetries, c.config.Host, c.config.Scheme, errString))
+			fmt.Fprintf(os.Stderr, "attempt %d/%d: Error connecting to PostgreSQL server %s (scheme: %s): %s\n", i+1, connectionRetries, c.config.Host, c.config.Scheme, errString)
 			continue
 		}
 		break
