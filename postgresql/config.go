@@ -278,18 +278,26 @@ func (c *Client) Connect() (*DBConnection, error) {
 
 		var db *sql.DB
 		var err error
-		if c.config.Scheme == "postgres" {
-			db, err = sql.Open(proxyDriverName, dsn)
-		} else {
-			db, err = postgres.Open(context.Background(), dsn)
-		}
+		// Retry connection to PostgreSQL server 5 times
+		connectionRetries := 5
 
-		if err == nil {
-			err = db.Ping()
-		}
-		if err != nil {
-			errString := strings.Replace(err.Error(), c.config.Password, "XXXX", 2)
-			return nil, fmt.Errorf("Error connecting to PostgreSQL server %s (scheme: %s): %s", c.config.Host, c.config.Scheme, errString)
+		for i := 0; i < connectionRetries; i++ {
+			if c.config.Scheme == "postgres" {
+				db, err = sql.Open(proxyDriverName, dsn)
+			} else {
+				db, err = postgres.Open(context.Background(), dsn)
+			}
+			if err == nil {
+				err = db.Ping()
+			}
+			if err != nil {
+				errString := strings.Replace(err.Error(), c.config.Password, "XXXX", 2)
+				fmt.Println(fmt.Errorf("Error connecting to PostgreSQL server %s (scheme: %s): %s", c.config.Host, c.config.Scheme, errString))
+				if i == connectionRetries-1 {
+					return nil, fmt.Errorf("Error connecting to PostgreSQL server %s (scheme: %s): %s", c.config.Host, c.config.Scheme, errString)
+				}
+			}
+			break
 		}
 
 		// We don't want to retain connection
