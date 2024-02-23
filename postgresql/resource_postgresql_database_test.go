@@ -143,7 +143,7 @@ func TestAccPostgresqlDatabase_Update(t *testing.T) {
 			if err != nil {
 				t.Fatalf("could not connect to database: %v", err)
 			}
-			allowConnections = db.featureSupported(featureDBAllowConnections)
+			allowConnections = db.FeatureSupported(featureDBAllowConnections)
 
 		},
 		Providers:    testAccProviders,
