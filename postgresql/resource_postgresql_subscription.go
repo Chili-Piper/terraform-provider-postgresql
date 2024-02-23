@@ -67,9 +67,9 @@ func resourcePostgreSQLSubscription() *schema.Resource {
 	}
 }
 
-func resourcePostgreSQLSubscriptionCreate(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLSubscriptionCreate(db DatabaseConnection, d *schema.ResourceData) error {
 	subName := d.Get("name").(string)
-	databaseName := getDatabaseForSubscription(d, db.client.databaseName)
+	databaseName := getDatabaseForSubscription(d, db.GetClient().databaseName)
 
 	publications, err := getPublicationsForSubscription(d)
 	if err != nil {
@@ -83,7 +83,7 @@ func resourcePostgreSQLSubscriptionCreate(db *DBConnection, d *schema.ResourceDa
 	optionalParams := getOptionalParameters(d)
 
 	// Creating of a subscription can not be done in an transaction
-	client := db.client.config.NewClient(databaseName)
+	client := db.GetClient().config.NewClient(databaseName)
 	conn, err := client.Connect()
 	if err != nil {
 		return fmt.Errorf("could not establish database connection: %w", err)
@@ -104,17 +104,17 @@ func resourcePostgreSQLSubscriptionCreate(db *DBConnection, d *schema.ResourceDa
 	return resourcePostgreSQLSubscriptionReadImpl(db, d)
 }
 
-func resourcePostgreSQLSubscriptionRead(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLSubscriptionRead(db DatabaseConnection, d *schema.ResourceData) error {
 	return resourcePostgreSQLSubscriptionReadImpl(db, d)
 }
 
-func resourcePostgreSQLSubscriptionReadImpl(db *DBConnection, d *schema.ResourceData) error {
-	databaseName, subName, err := getDBSubscriptionName(d, db.client)
+func resourcePostgreSQLSubscriptionReadImpl(db DatabaseConnection, d *schema.ResourceData) error {
+	databaseName, subName, err := getDBSubscriptionName(d, db.GetClient())
 	if err != nil {
 		return fmt.Errorf("could not get subscription name: %w", err)
 	}
 
-	txn, err := startTransaction(db.client, databaseName)
+	txn, err := startTransaction(db.GetClient(), databaseName)
 	if err != nil {
 		return fmt.Errorf("could not start transaction: %w", err)
 	}
@@ -175,14 +175,14 @@ func resourcePostgreSQLSubscriptionReadImpl(db *DBConnection, d *schema.Resource
 	return nil
 }
 
-func resourcePostgreSQLSubscriptionDelete(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLSubscriptionDelete(db DatabaseConnection, d *schema.ResourceData) error {
 	subName := d.Get("name").(string)
 	createSlot := d.Get("create_slot").(bool)
 
-	databaseName := getDatabaseForSubscription(d, db.client.databaseName)
+	databaseName := getDatabaseForSubscription(d, db.GetClient().databaseName)
 
 	// Dropping a subscription can not be done in a transaction
-	client := db.client.config.NewClient(databaseName)
+	client := db.GetClient().config.NewClient(databaseName)
 	conn, err := client.Connect()
 	if err != nil {
 		return fmt.Errorf("could not establish database connection: %w", err)
@@ -211,10 +211,10 @@ func resourcePostgreSQLSubscriptionDelete(db *DBConnection, d *schema.ResourceDa
 	return nil
 }
 
-func resourcePostgreSQLSubscriptionExists(db *DBConnection, d *schema.ResourceData) (bool, error) {
+func resourcePostgreSQLSubscriptionExists(db DatabaseConnection, d *schema.ResourceData) (bool, error) {
 	var subName string
 
-	database, subName, err := getDBSubscriptionName(d, db.client)
+	database, subName, err := getDBSubscriptionName(d, db.GetClient())
 	if err != nil {
 		return false, err
 	}
@@ -225,7 +225,7 @@ func resourcePostgreSQLSubscriptionExists(db *DBConnection, d *schema.ResourceDa
 		return false, err
 	}
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return false, err
 	}

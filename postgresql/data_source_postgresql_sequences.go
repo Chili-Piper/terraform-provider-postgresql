@@ -84,10 +84,10 @@ func dataSourcePostgreSQLDatabaseSequences() *schema.Resource {
 	}
 }
 
-func dataSourcePostgreSQLSequencesRead(db *DBConnection, d *schema.ResourceData) error {
+func dataSourcePostgreSQLSequencesRead(db DatabaseConnection, d *schema.ResourceData) error {
 	database := d.Get("database").(string)
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return err
 	}

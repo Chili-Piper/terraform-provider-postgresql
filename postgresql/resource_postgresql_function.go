@@ -180,11 +180,11 @@ func resourcePostgreSQLFunction() *schema.Resource {
 	}
 }
 
-func resourcePostgreSQLFunctionCreate(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureFunction) {
+func resourcePostgreSQLFunctionCreate(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureFunction) {
 		return fmt.Errorf(
 			"postgresql_function resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
@@ -195,11 +195,11 @@ func resourcePostgreSQLFunctionCreate(db *DBConnection, d *schema.ResourceData) 
 	return resourcePostgreSQLFunctionReadImpl(db, d)
 }
 
-func resourcePostgreSQLFunctionExists(db *DBConnection, d *schema.ResourceData) (bool, error) {
-	if !db.featureSupported(featureFunction) {
+func resourcePostgreSQLFunctionExists(db DatabaseConnection, d *schema.ResourceData) (bool, error) {
+	if !db.FeatureSupported(featureFunction) {
 		return false, fmt.Errorf(
 			"postgresql_function resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
@@ -212,7 +212,7 @@ func resourcePostgreSQLFunctionExists(db *DBConnection, d *schema.ResourceData) 
 
 	var functionExists bool
 
-	txn, err := startTransaction(db.client, databaseName)
+	txn, err := startTransaction(db.GetClient(), databaseName)
 	if err != nil {
 		return false, err
 	}
@@ -231,18 +231,18 @@ func resourcePostgreSQLFunctionExists(db *DBConnection, d *schema.ResourceData) 
 	return functionExists, nil
 }
 
-func resourcePostgreSQLFunctionRead(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureFunction) {
+func resourcePostgreSQLFunctionRead(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureFunction) {
 		return fmt.Errorf(
 			"postgresql_function resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
 	return resourcePostgreSQLFunctionReadImpl(db, d)
 }
 
-func resourcePostgreSQLFunctionReadImpl(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLFunctionReadImpl(db DatabaseConnection, d *schema.ResourceData) error {
 	functionId := d.Id()
 
 	if functionId == "" {
@@ -266,7 +266,7 @@ func resourcePostgreSQLFunctionReadImpl(db *DBConnection, d *schema.ResourceData
 		`LEFT JOIN pg_namespace n ON p.pronamespace = n.oid ` +
 		`WHERE p.oid = to_regprocedure($1)`
 
-	txn, err := startTransaction(db.client, databaseName)
+	txn, err := startTransaction(db.GetClient(), databaseName)
 	if err != nil {
 		return err
 	}
@@ -321,11 +321,11 @@ func resourcePostgreSQLFunctionReadImpl(db *DBConnection, d *schema.ResourceData
 	return nil
 }
 
-func resourcePostgreSQLFunctionDelete(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureFunction) {
+func resourcePostgreSQLFunctionDelete(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureFunction) {
 		return fmt.Errorf(
 			"postgresql_function resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
@@ -341,7 +341,7 @@ func resourcePostgreSQLFunctionDelete(db *DBConnection, d *schema.ResourceData) 
 
 	sql := fmt.Sprintf("DROP FUNCTION IF EXISTS %s %s", functionSignature, dropMode)
 
-	txn, err := startTransaction(db.client, databaseName)
+	txn, err := startTransaction(db.GetClient(), databaseName)
 	if err != nil {
 		return err
 	}
@@ -360,11 +360,11 @@ func resourcePostgreSQLFunctionDelete(db *DBConnection, d *schema.ResourceData) 
 	return nil
 }
 
-func resourcePostgreSQLFunctionUpdate(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureFunction) {
+func resourcePostgreSQLFunctionUpdate(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureFunction) {
 		return fmt.Errorf(
 			"postgresql_function resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
@@ -375,7 +375,7 @@ func resourcePostgreSQLFunctionUpdate(db *DBConnection, d *schema.ResourceData) 
 	return resourcePostgreSQLFunctionReadImpl(db, d)
 }
 
-func createFunction(db *DBConnection, d *schema.ResourceData, replace bool) error {
+func createFunction(db DatabaseConnection, d *schema.ResourceData, replace bool) error {
 
 	var pgFunction PGFunction
 	err := pgFunction.FromResourceData(d)
@@ -442,7 +442,7 @@ func createFunction(db *DBConnection, d *schema.ResourceData, replace bool) erro
 
 	sql := b.String()
 
-	txn, err := startTransaction(db.client, d.Get(funcDatabaseAttr).(string))
+	txn, err := startTransaction(db.GetClient(), d.Get(funcDatabaseAttr).(string))
 	if err != nil {
 		return err
 	}
@@ -459,14 +459,14 @@ func createFunction(db *DBConnection, d *schema.ResourceData, replace bool) erro
 	return nil
 }
 
-func generateFunctionID(db *DBConnection, d *schema.ResourceData) (string, error) {
+func generateFunctionID(db DatabaseConnection, d *schema.ResourceData) (string, error) {
 
 	b := bytes.NewBufferString("")
 
 	if dbAttr, ok := d.GetOk(funcDatabaseAttr); ok {
 		fmt.Fprint(b, dbAttr.(string), ".")
 	} else {
-		fmt.Fprint(b, db.client.databaseName, ".")
+		fmt.Fprint(b, db.GetClient().databaseName, ".")
 	}
 
 	var pgFunction PGFunction
@@ -500,14 +500,14 @@ func generateFunctionID(db *DBConnection, d *schema.ResourceData) (string, error
 	return b.String(), nil
 }
 
-func expandFunctionID(functionId string, d *schema.ResourceData, db *DBConnection) (databaseName string, functionSignature string, err error) {
+func expandFunctionID(functionId string, d *schema.ResourceData, db DatabaseConnection) (databaseName string, functionSignature string, err error) {
 
 	partsCount := strings.Count(functionId, ".") + 1
 
 	if partsCount == 2 {
 		clientDatabaseName := "postgres"
 		if db != nil {
-			clientDatabaseName = db.client.databaseName
+			clientDatabaseName = db.GetClient().databaseName
 		}
 
 		signature, err := quoteSignature(functionId)

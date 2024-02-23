@@ -92,10 +92,10 @@ func dataSourcePostgreSQLDatabaseTables() *schema.Resource {
 	}
 }
 
-func dataSourcePostgreSQLTablesRead(db *DBConnection, d *schema.ResourceData) error {
+func dataSourcePostgreSQLTablesRead(db DatabaseConnection, d *schema.ResourceData) error {
 	database := d.Get("database").(string)
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return err
 	}

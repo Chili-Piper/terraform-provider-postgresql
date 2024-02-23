@@ -95,16 +95,16 @@ func resourcePostgreSQLPublication() *schema.Resource {
 	}
 }
 
-func resourcePostgreSQLPublicationUpdate(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featurePublication) {
+func resourcePostgreSQLPublicationUpdate(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featurePublication) {
 		return fmt.Errorf(
 			"postgresql_publication resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
-	database := getDatabaseForPublication(d, db.client.databaseName)
-	txn, err := startTransaction(db.client, database)
+	database := getDatabaseForPublication(d, db.GetClient().databaseName)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return fmt.Errorf("could not start transaction: %w", err)
 	}
@@ -119,7 +119,7 @@ func resourcePostgreSQLPublicationUpdate(db *DBConnection, d *schema.ResourceDat
 		return fmt.Errorf("could not update publication tables: %w", err)
 	}
 
-	if err := setPubParams(txn, d, db.featureSupported(featurePublishViaRoot)); err != nil {
+	if err := setPubParams(txn, d, db.FeatureSupported(featurePublishViaRoot)); err != nil {
 		return fmt.Errorf("could not update publication tables: %w", err)
 	}
 
@@ -216,25 +216,25 @@ func setPubParams(txn *sql.Tx, d *schema.ResourceData, pubViaRootEnabled bool) e
 	return nil
 }
 
-func resourcePostgreSQLPublicationCreate(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featurePublication) {
+func resourcePostgreSQLPublicationCreate(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featurePublication) {
 		return fmt.Errorf(
 			"postgresql_publication resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
 	name := d.Get(pubNameAttr).(string)
-	databaseName := getDatabaseForPublication(d, db.client.databaseName)
+	databaseName := getDatabaseForPublication(d, db.GetClient().databaseName)
 	tables, err := getTablesForPublication(d)
 	if err != nil {
 		return fmt.Errorf("could not get tables for publication: %w", err)
 	}
-	publicationParameters, err := getPublicationParameters(d, db.featureSupported(featurePublishViaRoot))
+	publicationParameters, err := getPublicationParameters(d, db.FeatureSupported(featurePublishViaRoot))
 	if err != nil {
 		return fmt.Errorf("could not get publication parameters: %w", err)
 	}
-	txn, err := startTransaction(db.client, databaseName)
+	txn, err := startTransaction(db.GetClient(), databaseName)
 	if err != nil {
 		return fmt.Errorf("could not start transaction: %w", err)
 	}
@@ -258,17 +258,17 @@ func resourcePostgreSQLPublicationCreate(db *DBConnection, d *schema.ResourceDat
 	return resourcePostgreSQLPublicationReadImpl(db, d)
 }
 
-func resourcePostgreSQLPublicationExists(db *DBConnection, d *schema.ResourceData) (bool, error) {
-	if !db.featureSupported(featurePublication) {
+func resourcePostgreSQLPublicationExists(db DatabaseConnection, d *schema.ResourceData) (bool, error) {
+	if !db.FeatureSupported(featurePublication) {
 		return false, fmt.Errorf(
 			"postgresql_publication resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
 	var PublicationName string
 
-	database, PublicationName, err := getDBPublicationName(d, db.client)
+	database, PublicationName, err := getDBPublicationName(d, db.GetClient())
 	if err != nil {
 		return false, err
 	}
@@ -279,7 +279,7 @@ func resourcePostgreSQLPublicationExists(db *DBConnection, d *schema.ResourceDat
 		return false, err
 	}
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return false, err
 	}
@@ -297,24 +297,24 @@ func resourcePostgreSQLPublicationExists(db *DBConnection, d *schema.ResourceDat
 	return true, nil
 }
 
-func resourcePostgreSQLPublicationRead(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLPublicationRead(db DatabaseConnection, d *schema.ResourceData) error {
 	return resourcePostgreSQLPublicationReadImpl(db, d)
 }
 
-func resourcePostgreSQLPublicationReadImpl(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featurePublication) {
+func resourcePostgreSQLPublicationReadImpl(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featurePublication) {
 		return fmt.Errorf(
 			"postgresql_publication resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
-	database, PublicationName, err := getDBPublicationName(d, db.client)
+	database, PublicationName, err := getDBPublicationName(d, db.GetClient())
 	if err != nil {
 		return fmt.Errorf("could not get publication name: %w", err)
 	}
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return fmt.Errorf("could not start transaction: %w", err)
 	}
@@ -333,11 +333,11 @@ func resourcePostgreSQLPublicationReadImpl(db *DBConnection, d *schema.ResourceD
 		&pubowner,
 	}
 
-	if db.featureSupported(featurePublishViaRoot) {
+	if db.FeatureSupported(featurePublishViaRoot) {
 		columns = append(columns, "pubviaroot")
 		values = append(values, &pubviaroot)
 	}
-	if db.featureSupported(featurePubTruncate) {
+	if db.FeatureSupported(featurePubTruncate) {
 		columns = append(columns, "pubtruncate")
 		values = append(values, &pubtruncate)
 	}
@@ -402,18 +402,18 @@ func resourcePostgreSQLPublicationReadImpl(db *DBConnection, d *schema.ResourceD
 	return nil
 }
 
-func resourcePostgreSQLPublicationDelete(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featurePublication) {
+func resourcePostgreSQLPublicationDelete(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featurePublication) {
 		return fmt.Errorf(
 			"postgresql_publication resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
 	publicationName := d.Get(pubNameAttr).(string)
-	database := getDatabaseForPublication(d, db.client.databaseName)
+	database := getDatabaseForPublication(d, db.GetClient().databaseName)
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return fmt.Errorf("could not start transaction: %w", err)
 	}

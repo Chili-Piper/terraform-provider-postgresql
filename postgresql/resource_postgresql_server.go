@@ -78,11 +78,11 @@ func resourcePostgreSQLServer() *schema.Resource {
 	}
 }
 
-func resourcePostgreSQLServerCreate(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureServer) {
+func resourcePostgreSQLServerCreate(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureServer) {
 		return fmt.Errorf(
 			"Foreign Server resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
@@ -115,7 +115,7 @@ func resourcePostgreSQLServerCreate(db *DBConnection, d *schema.ResourceData) er
 		fmt.Fprint(b, " ) ")
 	}
 
-	txn, err := startTransaction(db.client, "")
+	txn, err := startTransaction(db.GetClient(), "")
 	if err != nil {
 		return err
 	}
@@ -147,20 +147,20 @@ func resourcePostgreSQLServerCreate(db *DBConnection, d *schema.ResourceData) er
 	return resourcePostgreSQLServerReadImpl(db, d)
 }
 
-func resourcePostgreSQLServerRead(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureServer) {
+func resourcePostgreSQLServerRead(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureServer) {
 		return fmt.Errorf(
 			"Foreign Server resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
 	return resourcePostgreSQLServerReadImpl(db, d)
 }
 
-func resourcePostgreSQLServerReadImpl(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLServerReadImpl(db DatabaseConnection, d *schema.ResourceData) error {
 	serverName := d.Get(serverNameAttr).(string)
-	txn, err := startTransaction(db.client, "")
+	txn, err := startTransaction(db.GetClient(), "")
 	if err != nil {
 		return err
 	}
@@ -198,17 +198,17 @@ func resourcePostgreSQLServerReadImpl(db *DBConnection, d *schema.ResourceData) 
 	return nil
 }
 
-func resourcePostgreSQLServerDelete(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureServer) {
+func resourcePostgreSQLServerDelete(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureServer) {
 		return fmt.Errorf(
 			"Foreign Server resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
 	serverName := d.Get(serverNameAttr).(string)
 
-	txn, err := startTransaction(db.client, "")
+	txn, err := startTransaction(db.GetClient(), "")
 	if err != nil {
 		return err
 	}
@@ -233,15 +233,15 @@ func resourcePostgreSQLServerDelete(db *DBConnection, d *schema.ResourceData) er
 	return nil
 }
 
-func resourcePostgreSQLServerUpdate(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureServer) {
+func resourcePostgreSQLServerUpdate(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureServer) {
 		return fmt.Errorf(
 			"Foreign Server resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
-	txn, err := startTransaction(db.client, "")
+	txn, err := startTransaction(db.GetClient(), "")
 	if err != nil {
 		return err
 	}

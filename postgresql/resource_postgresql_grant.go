@@ -104,12 +104,12 @@ func resourcePostgreSQLGrant() *schema.Resource {
 	}
 }
 
-func resourcePostgreSQLGrantRead(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLGrantRead(db DatabaseConnection, d *schema.ResourceData) error {
 	if err := validateFeatureSupport(db, d); err != nil {
 		return fmt.Errorf("feature is not supported: %v", err)
 	}
 
-	exists, err := checkRoleDBSchemaExists(db.client, d)
+	exists, err := checkRoleDBSchemaExists(db.GetClient(), d)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func resourcePostgreSQLGrantRead(db *DBConnection, d *schema.ResourceData) error
 	}
 	d.SetId(generateGrantID(d))
 
-	txn, err := startTransaction(db.client, d.Get("database").(string))
+	txn, err := startTransaction(db.GetClient(), d.Get("database").(string))
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func resourcePostgreSQLGrantRead(db *DBConnection, d *schema.ResourceData) error
 	return readRolePrivileges(txn, d)
 }
 
-func resourcePostgreSQLGrantCreate(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLGrantCreate(db DatabaseConnection, d *schema.ResourceData) error {
 	if err := validateFeatureSupport(db, d); err != nil {
 		return fmt.Errorf("feature is not supported: %v", err)
 	}
@@ -162,7 +162,7 @@ func resourcePostgreSQLGrantCreate(db *DBConnection, d *schema.ResourceData) err
 
 	database := d.Get("database").(string)
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return err
 	}
@@ -204,7 +204,7 @@ func resourcePostgreSQLGrantCreate(db *DBConnection, d *schema.ResourceData) err
 
 	d.SetId(generateGrantID(d))
 
-	txn, err = startTransaction(db.client, database)
+	txn, err = startTransaction(db.GetClient(), database)
 	if err != nil {
 		return err
 	}
@@ -213,13 +213,13 @@ func resourcePostgreSQLGrantCreate(db *DBConnection, d *schema.ResourceData) err
 	return readRolePrivileges(txn, d)
 }
 
-func resourcePostgreSQLGrantDelete(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLGrantDelete(db DatabaseConnection, d *schema.ResourceData) error {
 	if err := validateFeatureSupport(db, d); err != nil {
 		return fmt.Errorf("feature is not supported: %v", err)
 	}
 
 	database := d.Get("database").(string)
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return err
 	}
@@ -813,23 +813,23 @@ func getRolesToGrant(txn *sql.Tx, d *schema.ResourceData) ([]string, error) {
 	return owners, nil
 }
 
-func validateFeatureSupport(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featurePrivileges) {
+func validateFeatureSupport(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featurePrivileges) {
 		return fmt.Errorf(
 			"postgresql_grant resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
-	if d.Get("object_type") == "procedure" && !db.featureSupported(featureProcedure) {
+	if d.Get("object_type") == "procedure" && !db.FeatureSupported(featureProcedure) {
 		return fmt.Errorf(
 			"object type PROCEDURE is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
-	if d.Get("object_type") == "routine" && !db.featureSupported(featureRoutine) {
+	if d.Get("object_type") == "routine" && !db.FeatureSupported(featureRoutine) {
 		return fmt.Errorf(
 			"object type ROUTINE is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 	return nil

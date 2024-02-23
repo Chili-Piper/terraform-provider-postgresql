@@ -73,16 +73,16 @@ func resourcePostgreSQLExtension() *schema.Resource {
 	}
 }
 
-func resourcePostgreSQLExtensionCreate(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureExtension) {
+func resourcePostgreSQLExtensionCreate(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureExtension) {
 		return fmt.Errorf(
 			"postgresql_extension resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
 	extName := d.Get(extNameAttr).(string)
-	databaseName := getDatabaseForExtension(d, db.client.databaseName)
+	databaseName := getDatabaseForExtension(d, db.GetClient().databaseName)
 
 	b := bytes.NewBufferString("CREATE EXTENSION IF NOT EXISTS ")
 	fmt.Fprint(b, pq.QuoteIdentifier(extName))
@@ -99,7 +99,7 @@ func resourcePostgreSQLExtensionCreate(db *DBConnection, d *schema.ResourceData)
 		fmt.Fprint(b, " CASCADE")
 	}
 
-	txn, err := startTransaction(db.client, databaseName)
+	txn, err := startTransaction(db.GetClient(), databaseName)
 	if err != nil {
 		return err
 	}
@@ -119,17 +119,17 @@ func resourcePostgreSQLExtensionCreate(db *DBConnection, d *schema.ResourceData)
 	return resourcePostgreSQLExtensionReadImpl(db, d)
 }
 
-func resourcePostgreSQLExtensionExists(db *DBConnection, d *schema.ResourceData) (bool, error) {
-	if !db.featureSupported(featureExtension) {
+func resourcePostgreSQLExtensionExists(db DatabaseConnection, d *schema.ResourceData) (bool, error) {
+	if !db.FeatureSupported(featureExtension) {
 		return false, fmt.Errorf(
 			"postgresql_extension resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
 	var extensionName string
 
-	database, extName, err := getDBExtName(d, db.client)
+	database, extName, err := getDBExtName(d, db.GetClient())
 	if err != nil {
 		return false, err
 	}
@@ -140,7 +140,7 @@ func resourcePostgreSQLExtensionExists(db *DBConnection, d *schema.ResourceData)
 		return false, err
 	}
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return false, err
 	}
@@ -158,24 +158,24 @@ func resourcePostgreSQLExtensionExists(db *DBConnection, d *schema.ResourceData)
 	return true, nil
 }
 
-func resourcePostgreSQLExtensionRead(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureExtension) {
+func resourcePostgreSQLExtensionRead(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureExtension) {
 		return fmt.Errorf(
 			"postgresql_extension resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
 	return resourcePostgreSQLExtensionReadImpl(db, d)
 }
 
-func resourcePostgreSQLExtensionReadImpl(db *DBConnection, d *schema.ResourceData) error {
-	database, extName, err := getDBExtName(d, db.client)
+func resourcePostgreSQLExtensionReadImpl(db DatabaseConnection, d *schema.ResourceData) error {
+	database, extName, err := getDBExtName(d, db.GetClient())
 	if err != nil {
 		return err
 	}
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return err
 	}
@@ -204,18 +204,18 @@ func resourcePostgreSQLExtensionReadImpl(db *DBConnection, d *schema.ResourceDat
 	return nil
 }
 
-func resourcePostgreSQLExtensionDelete(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureExtension) {
+func resourcePostgreSQLExtensionDelete(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureExtension) {
 		return fmt.Errorf(
 			"postgresql_extension resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
 	extName := d.Get(extNameAttr).(string)
-	database := getDatabaseForExtension(d, db.client.databaseName)
+	database := getDatabaseForExtension(d, db.GetClient().databaseName)
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return err
 	}
@@ -240,16 +240,16 @@ func resourcePostgreSQLExtensionDelete(db *DBConnection, d *schema.ResourceData)
 	return nil
 }
 
-func resourcePostgreSQLExtensionUpdate(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureExtension) {
+func resourcePostgreSQLExtensionUpdate(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureExtension) {
 		return fmt.Errorf(
 			"postgresql_extension resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
-	database := getDatabaseForExtension(d, db.client.databaseName)
-	txn, err := startTransaction(db.client, database)
+	database := getDatabaseForExtension(d, db.GetClient().databaseName)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return err
 	}
