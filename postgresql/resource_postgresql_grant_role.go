@@ -56,26 +56,26 @@ func resourcePostgreSQLGrantRole() *schema.Resource {
 	}
 }
 
-func resourcePostgreSQLGrantRoleRead(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featurePrivileges) {
+func resourcePostgreSQLGrantRoleRead(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featurePrivileges) {
 		return fmt.Errorf(
 			"postgresql_grant_role resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
 	return readGrantRole(db, d)
 }
 
-func resourcePostgreSQLGrantRoleCreate(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featurePrivileges) {
+func resourcePostgreSQLGrantRoleCreate(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featurePrivileges) {
 		return fmt.Errorf(
 			"postgresql_grant_role resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
-	txn, err := startTransaction(db.client, "")
+	txn, err := startTransaction(db.GetClient(), "")
 	if err != nil {
 		return err
 	}
@@ -99,15 +99,15 @@ func resourcePostgreSQLGrantRoleCreate(db *DBConnection, d *schema.ResourceData)
 	return readGrantRole(db, d)
 }
 
-func resourcePostgreSQLGrantRoleDelete(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featurePrivileges) {
+func resourcePostgreSQLGrantRoleDelete(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featurePrivileges) {
 		return fmt.Errorf(
 			"postgresql_grant_role resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
-	txn, err := startTransaction(db.client, "")
+	txn, err := startTransaction(db.GetClient(), "")
 	if err != nil {
 		return err
 	}

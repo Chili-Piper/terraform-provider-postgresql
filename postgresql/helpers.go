@@ -11,7 +11,7 @@ import (
 	"github.com/lib/pq"
 )
 
-func PGResourceFunc(fn func(*DBConnection, *schema.ResourceData) error) func(*schema.ResourceData, interface{}) error {
+func PGResourceFunc(fn func(DatabaseConnection, *schema.ResourceData) error) func(*schema.ResourceData, interface{}) error {
 	return func(d *schema.ResourceData, meta interface{}) error {
 		client := meta.(*Client)
 
@@ -24,7 +24,7 @@ func PGResourceFunc(fn func(*DBConnection, *schema.ResourceData) error) func(*sc
 	}
 }
 
-func PGResourceExistsFunc(fn func(*DBConnection, *schema.ResourceData) (bool, error)) func(*schema.ResourceData, interface{}) (bool, error) {
+func PGResourceExistsFunc(fn func(DatabaseConnection, *schema.ResourceData) (bool, error)) func(*schema.ResourceData, interface{}) (bool, error) {
 	return func(d *schema.ResourceData, meta interface{}) (bool, error) {
 		client := meta.(*Client)
 

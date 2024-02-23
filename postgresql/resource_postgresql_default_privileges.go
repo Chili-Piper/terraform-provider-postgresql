@@ -76,18 +76,18 @@ func resourcePostgreSQLDefaultPrivileges() *schema.Resource {
 	}
 }
 
-func resourcePostgreSQLDefaultPrivilegesRead(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLDefaultPrivilegesRead(db DatabaseConnection, d *schema.ResourceData) error {
 	pgSchema := d.Get("schema").(string)
 	objectType := d.Get("object_type").(string)
 
-	if pgSchema != "" && objectType == "schema" && !db.featureSupported(featurePrivilegesOnSchemas) {
+	if pgSchema != "" && objectType == "schema" && !db.FeatureSupported(featurePrivilegesOnSchemas) {
 		return fmt.Errorf(
 			"changing default privileges for schemas is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
-	exists, err := checkRoleDBSchemaExists(db.client, d)
+	exists, err := checkRoleDBSchemaExists(db.GetClient(), d)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func resourcePostgreSQLDefaultPrivilegesRead(db *DBConnection, d *schema.Resourc
 		return nil
 	}
 
-	txn, err := startTransaction(db.client, d.Get("database").(string))
+	txn, err := startTransaction(db.GetClient(), d.Get("database").(string))
 	if err != nil {
 		return err
 	}
@@ -105,15 +105,15 @@ func resourcePostgreSQLDefaultPrivilegesRead(db *DBConnection, d *schema.Resourc
 	return readRoleDefaultPrivileges(txn, d)
 }
 
-func resourcePostgreSQLDefaultPrivilegesCreate(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLDefaultPrivilegesCreate(db DatabaseConnection, d *schema.ResourceData) error {
 	pgSchema := d.Get("schema").(string)
 	objectType := d.Get("object_type").(string)
 
 	if pgSchema != "" && objectType == "schema" {
-		if !db.featureSupported(featurePrivilegesOnSchemas) {
+		if !db.FeatureSupported(featurePrivilegesOnSchemas) {
 			return fmt.Errorf(
 				"changing default privileges for schemas is not supported for this Postgres version (%s)",
-				db.version,
+				db.GetVersion(),
 			)
 		}
 		return fmt.Errorf("cannot specify `schema` when `object_type` is `schema`")
@@ -130,7 +130,7 @@ func resourcePostgreSQLDefaultPrivilegesCreate(db *DBConnection, d *schema.Resou
 	database := d.Get("database").(string)
 	owner := d.Get("owner").(string)
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return err
 	}
@@ -164,7 +164,7 @@ func resourcePostgreSQLDefaultPrivilegesCreate(db *DBConnection, d *schema.Resou
 
 	d.SetId(generateDefaultPrivilegesID(d))
 
-	txn, err = startTransaction(db.client, d.Get("database").(string))
+	txn, err = startTransaction(db.GetClient(), d.Get("database").(string))
 	if err != nil {
 		return err
 	}
@@ -173,19 +173,19 @@ func resourcePostgreSQLDefaultPrivilegesCreate(db *DBConnection, d *schema.Resou
 	return readRoleDefaultPrivileges(txn, d)
 }
 
-func resourcePostgreSQLDefaultPrivilegesDelete(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLDefaultPrivilegesDelete(db DatabaseConnection, d *schema.ResourceData) error {
 	owner := d.Get("owner").(string)
 	pgSchema := d.Get("schema").(string)
 	objectType := d.Get("object_type").(string)
 
-	if pgSchema != "" && objectType == "schema" && !db.featureSupported(featurePrivilegesOnSchemas) {
+	if pgSchema != "" && objectType == "schema" && !db.FeatureSupported(featurePrivilegesOnSchemas) {
 		return fmt.Errorf(
 			"changing default privileges for schemas is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
-	txn, err := startTransaction(db.client, d.Get("database").(string))
+	txn, err := startTransaction(db.GetClient(), d.Get("database").(string))
 	if err != nil {
 		return err
 	}

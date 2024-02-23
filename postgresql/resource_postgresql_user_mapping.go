@@ -52,11 +52,11 @@ func resourcePostgreSQLUserMapping() *schema.Resource {
 	}
 }
 
-func resourcePostgreSQLUserMappingCreate(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureServer) {
+func resourcePostgreSQLUserMappingCreate(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureServer) {
 		return fmt.Errorf(
 			"Foreign Server resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
@@ -90,22 +90,22 @@ func resourcePostgreSQLUserMappingCreate(db *DBConnection, d *schema.ResourceDat
 	return resourcePostgreSQLUserMappingReadImpl(db, d)
 }
 
-func resourcePostgreSQLUserMappingRead(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureServer) {
+func resourcePostgreSQLUserMappingRead(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureServer) {
 		return fmt.Errorf(
 			"Foreign Server resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
 	return resourcePostgreSQLUserMappingReadImpl(db, d)
 }
 
-func resourcePostgreSQLUserMappingReadImpl(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLUserMappingReadImpl(db DatabaseConnection, d *schema.ResourceData) error {
 	username := d.Get(userMappingUserNameAttr).(string)
 	serverName := d.Get(userMappingServerNameAttr).(string)
 
-	txn, err := startTransaction(db.client, "")
+	txn, err := startTransaction(db.GetClient(), "")
 	if err != nil {
 		return err
 	}
@@ -137,18 +137,18 @@ func resourcePostgreSQLUserMappingReadImpl(db *DBConnection, d *schema.ResourceD
 	return nil
 }
 
-func resourcePostgreSQLUserMappingDelete(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureServer) {
+func resourcePostgreSQLUserMappingDelete(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureServer) {
 		return fmt.Errorf(
 			"Foreign Server resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
 	username := d.Get(userMappingUserNameAttr).(string)
 	serverName := d.Get(userMappingServerNameAttr).(string)
 
-	txn, err := startTransaction(db.client, "")
+	txn, err := startTransaction(db.GetClient(), "")
 	if err != nil {
 		return err
 	}
@@ -168,11 +168,11 @@ func resourcePostgreSQLUserMappingDelete(db *DBConnection, d *schema.ResourceDat
 	return nil
 }
 
-func resourcePostgreSQLUserMappingUpdate(db *DBConnection, d *schema.ResourceData) error {
-	if !db.featureSupported(featureServer) {
+func resourcePostgreSQLUserMappingUpdate(db DatabaseConnection, d *schema.ResourceData) error {
+	if !db.FeatureSupported(featureServer) {
 		return fmt.Errorf(
 			"Foreign Server resource is not supported for this Postgres version (%s)",
-			db.version,
+			db.GetVersion(),
 		)
 	}
 
@@ -183,7 +183,7 @@ func resourcePostgreSQLUserMappingUpdate(db *DBConnection, d *schema.ResourceDat
 	return resourcePostgreSQLUserMappingReadImpl(db, d)
 }
 
-func setUserMappingOptionsIfChanged(db *DBConnection, d *schema.ResourceData) error {
+func setUserMappingOptionsIfChanged(db DatabaseConnection, d *schema.ResourceData) error {
 	if !d.HasChange(userMappingOptionsAttr) {
 		return nil
 	}

@@ -116,9 +116,9 @@ func resourcePostgreSQLSchema() *schema.Resource {
 	}
 }
 
-func resourcePostgreSQLSchemaCreate(db *DBConnection, d *schema.ResourceData) error {
-	database := getDatabase(d, db.client.databaseName)
-	txn, err := startTransaction(db.client, database)
+func resourcePostgreSQLSchemaCreate(db DatabaseConnection, d *schema.ResourceData) error {
+	database := getDatabase(d, db.GetClient().databaseName)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func resourcePostgreSQLSchemaCreate(db *DBConnection, d *schema.ResourceData) er
 	return resourcePostgreSQLSchemaReadImpl(db, d)
 }
 
-func createSchema(db *DBConnection, txn *sql.Tx, d *schema.ResourceData) error {
+func createSchema(db DatabaseConnection, txn *sql.Tx, d *schema.ResourceData) error {
 	schemaName := d.Get(schemaNameAttr).(string)
 
 	// Check if previous tasks haven't already create schema
@@ -168,7 +168,7 @@ func createSchema(db *DBConnection, txn *sql.Tx, d *schema.ResourceData) error {
 	switch {
 	case err == sql.ErrNoRows:
 		b := bytes.NewBufferString("CREATE SCHEMA ")
-		if db.featureSupported(featureSchemaCreateIfNotExist) {
+		if db.FeatureSupported(featureSchemaCreateIfNotExist) {
 			if v := d.Get(schemaIfNotExists); v.(bool) {
 				fmt.Fprint(b, "IF NOT EXISTS ")
 			}
@@ -228,10 +228,10 @@ func createSchema(db *DBConnection, txn *sql.Tx, d *schema.ResourceData) error {
 	return nil
 }
 
-func resourcePostgreSQLSchemaDelete(db *DBConnection, d *schema.ResourceData) error {
-	database := getDatabase(d, db.client.databaseName)
+func resourcePostgreSQLSchemaDelete(db DatabaseConnection, d *schema.ResourceData) error {
+	database := getDatabase(d, db.GetClient().databaseName)
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return err
 	}
@@ -275,8 +275,8 @@ func resourcePostgreSQLSchemaDelete(db *DBConnection, d *schema.ResourceData) er
 	return nil
 }
 
-func resourcePostgreSQLSchemaExists(db *DBConnection, d *schema.ResourceData) (bool, error) {
-	database, schemaName, err := getDBSchemaName(d, db.client.databaseName)
+func resourcePostgreSQLSchemaExists(db DatabaseConnection, d *schema.ResourceData) (bool, error) {
+	database, schemaName, err := getDBSchemaName(d, db.GetClient().databaseName)
 	if err != nil {
 		return false, err
 	}
@@ -287,7 +287,7 @@ func resourcePostgreSQLSchemaExists(db *DBConnection, d *schema.ResourceData) (b
 		return false, err
 	}
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return false, err
 	}
@@ -304,17 +304,17 @@ func resourcePostgreSQLSchemaExists(db *DBConnection, d *schema.ResourceData) (b
 	return true, nil
 }
 
-func resourcePostgreSQLSchemaRead(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLSchemaRead(db DatabaseConnection, d *schema.ResourceData) error {
 	return resourcePostgreSQLSchemaReadImpl(db, d)
 }
 
-func resourcePostgreSQLSchemaReadImpl(db *DBConnection, d *schema.ResourceData) error {
-	database, schemaName, err := getDBSchemaName(d, db.client.databaseName)
+func resourcePostgreSQLSchemaReadImpl(db DatabaseConnection, d *schema.ResourceData) error {
+	database, schemaName, err := getDBSchemaName(d, db.GetClient().databaseName)
 	if err != nil {
 		return err
 	}
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return err
 	}
@@ -363,10 +363,10 @@ func resourcePostgreSQLSchemaReadImpl(db *DBConnection, d *schema.ResourceData) 
 	}
 }
 
-func resourcePostgreSQLSchemaUpdate(db *DBConnection, d *schema.ResourceData) error {
-	databaseName := getDatabase(d, db.client.databaseName)
+func resourcePostgreSQLSchemaUpdate(db DatabaseConnection, d *schema.ResourceData) error {
+	databaseName := getDatabase(d, db.GetClient().databaseName)
 
-	txn, err := startTransaction(db.client, databaseName)
+	txn, err := startTransaction(db.GetClient(), databaseName)
 	if err != nil {
 		return err
 	}

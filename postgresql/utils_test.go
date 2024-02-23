@@ -25,8 +25,8 @@ func testCheckCompatibleVersion(t *testing.T, feature featureName) {
 	if err != nil {
 		t.Fatalf("could connect to database: %v", err)
 	}
-	if !db.featureSupported(feature) {
-		t.Skipf("Skip extension tests for Postgres %s", db.version)
+	if !db.FeatureSupported(feature) {
+		t.Skipf("Skip extension tests for Postgres %s", db.GetVersion())
 	}
 }
 

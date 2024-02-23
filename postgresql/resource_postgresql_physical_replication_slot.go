@@ -26,7 +26,7 @@ func resourcePostgreSQLPhysicalReplicationSlot() *schema.Resource {
 	}
 }
 
-func resourcePostgreSQLPhysicalReplicationSlotCreate(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLPhysicalReplicationSlotCreate(db DatabaseConnection, d *schema.ResourceData) error {
 	name := d.Get("name").(string)
 	sql := "SELECT FROM pg_create_physical_replication_slot($1)"
 	if _, err := db.Exec(sql, name); err != nil {
@@ -37,7 +37,7 @@ func resourcePostgreSQLPhysicalReplicationSlotCreate(db *DBConnection, d *schema
 	return nil
 }
 
-func resourcePostgreSQLPhysicalReplicationSlotExists(db *DBConnection, d *schema.ResourceData) (bool, error) {
+func resourcePostgreSQLPhysicalReplicationSlotExists(db DatabaseConnection, d *schema.ResourceData) (bool, error) {
 	query := "SELECT 1 FROM pg_catalog.pg_replication_slots WHERE slot_name = $1 and slot_type = 'physical'"
 	var unused int
 	err := db.QueryRow(query, d.Id()).Scan(&unused)
@@ -51,12 +51,12 @@ func resourcePostgreSQLPhysicalReplicationSlotExists(db *DBConnection, d *schema
 	return true, nil
 }
 
-func resourcePostgreSQLPhysicalReplicationSlotRead(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLPhysicalReplicationSlotRead(db DatabaseConnection, d *schema.ResourceData) error {
 	d.Set("name", d.Id())
 	return nil
 }
 
-func resourcePostgreSQLPhysicalReplicationSlotDelete(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLPhysicalReplicationSlotDelete(db DatabaseConnection, d *schema.ResourceData) error {
 
 	replicationSlotName := d.Get("name").(string)
 

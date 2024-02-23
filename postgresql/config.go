@@ -46,7 +46,7 @@ const (
 
 var (
 	dbRegistryLock sync.Mutex
-	dbRegistry     map[string]*DBConnection = make(map[string]*DBConnection, 1)
+	dbRegistry     map[string]DatabaseConnection = make(map[string]DatabaseConnection, 1)
 
 	// Mapping of feature flags to versions
 	featureSupported = map[featureName]semver.Range{
@@ -115,6 +115,15 @@ var (
 		featureDatabaseOwnerRole: semver.MustParseRange(">=15.0.0"),
 	}
 )
+
+type DatabaseConnection interface {
+	QueryAble
+	Begin() (*sql.Tx, error)
+	GetClient() *Client
+	GetVersion() semver.Version
+	FeatureSupported(name featureName) bool
+	IsSuperuser() (bool, error)
+}
 
 type DBConnection struct {
 	*sql.DB
@@ -298,7 +307,7 @@ func (c *Client) retryConnect(dsn string) (*sql.DB, error) {
 // Connect returns a copy to an sql.Open()'ed database connection wrapped in a DBConnection struct.
 // Callers must return their database resources. Use of QueryRow() or Exec() is encouraged.
 // Query() must have their rows.Close()'ed.
-func (c *Client) Connect() (*DBConnection, error) {
+func (c *Client) Connect() (DatabaseConnection, error) {
 	dbRegistryLock.Lock()
 	defer dbRegistryLock.Unlock()
 
@@ -331,11 +340,11 @@ func (c *Client) Connect() (*DBConnection, error) {
 			}
 		}
 
-		conn = &DBConnection{
+		conn = NewRetryableConnection(&DBConnection{
 			db,
 			c,
 			*version,
-		}
+		})
 		dbRegistry[dsn] = conn
 	}
 

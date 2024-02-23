@@ -42,13 +42,13 @@ func resourcePostgreSQLReplicationSlot() *schema.Resource {
 	}
 }
 
-func resourcePostgreSQLReplicationSlotCreate(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLReplicationSlotCreate(db DatabaseConnection, d *schema.ResourceData) error {
 
 	name := d.Get("name").(string)
 	plugin := d.Get("plugin").(string)
-	databaseName := getDatabaseForReplicationSlot(d, db.client.databaseName)
+	databaseName := getDatabaseForReplicationSlot(d, db.GetClient().databaseName)
 
-	txn, err := startTransaction(db.client, databaseName)
+	txn, err := startTransaction(db.GetClient(), databaseName)
 	if err != nil {
 		return err
 	}
@@ -68,11 +68,11 @@ func resourcePostgreSQLReplicationSlotCreate(db *DBConnection, d *schema.Resourc
 	return resourcePostgreSQLReplicationSlotReadImpl(db, d)
 }
 
-func resourcePostgreSQLReplicationSlotExists(db *DBConnection, d *schema.ResourceData) (bool, error) {
+func resourcePostgreSQLReplicationSlotExists(db DatabaseConnection, d *schema.ResourceData) (bool, error) {
 
 	var ReplicationSlotName string
 
-	database, replicationSlotName, err := getDBReplicationSlotName(d, db.client)
+	database, replicationSlotName, err := getDBReplicationSlotName(d, db.GetClient())
 	if err != nil {
 		return false, err
 	}
@@ -83,7 +83,7 @@ func resourcePostgreSQLReplicationSlotExists(db *DBConnection, d *schema.Resourc
 		return false, err
 	}
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return false, err
 	}
@@ -101,17 +101,17 @@ func resourcePostgreSQLReplicationSlotExists(db *DBConnection, d *schema.Resourc
 	return true, nil
 }
 
-func resourcePostgreSQLReplicationSlotRead(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLReplicationSlotRead(db DatabaseConnection, d *schema.ResourceData) error {
 	return resourcePostgreSQLReplicationSlotReadImpl(db, d)
 }
 
-func resourcePostgreSQLReplicationSlotReadImpl(db *DBConnection, d *schema.ResourceData) error {
-	database, replicationSlotName, err := getDBReplicationSlotName(d, db.client)
+func resourcePostgreSQLReplicationSlotReadImpl(db DatabaseConnection, d *schema.ResourceData) error {
+	database, replicationSlotName, err := getDBReplicationSlotName(d, db.GetClient())
 	if err != nil {
 		return err
 	}
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return err
 	}
@@ -139,12 +139,12 @@ func resourcePostgreSQLReplicationSlotReadImpl(db *DBConnection, d *schema.Resou
 	return nil
 }
 
-func resourcePostgreSQLReplicationSlotDelete(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLReplicationSlotDelete(db DatabaseConnection, d *schema.ResourceData) error {
 
 	replicationSlotName := d.Get("name").(string)
-	database := getDatabaseForReplicationSlot(d, db.client.databaseName)
+	database := getDatabaseForReplicationSlot(d, db.GetClient().databaseName)
 
-	txn, err := startTransaction(db.client, database)
+	txn, err := startTransaction(db.GetClient(), database)
 	if err != nil {
 		return err
 	}

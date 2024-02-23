@@ -106,7 +106,7 @@ func resourcePostgreSQLDatabase() *schema.Resource {
 	}
 }
 
-func resourcePostgreSQLDatabaseCreate(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLDatabaseCreate(db DatabaseConnection, d *schema.ResourceData) error {
 	if err := createDatabase(db, d); err != nil {
 		return err
 	}
@@ -116,15 +116,15 @@ func resourcePostgreSQLDatabaseCreate(db *DBConnection, d *schema.ResourceData) 
 	return resourcePostgreSQLDatabaseReadImpl(db, d)
 }
 
-func createDatabase(db *DBConnection, d *schema.ResourceData) error {
-	currentUser := db.client.config.getDatabaseUsername()
+func createDatabase(db DatabaseConnection, d *schema.ResourceData) error {
+	currentUser := db.GetClient().config.getDatabaseUsername()
 	owner := d.Get(dbOwnerAttr).(string)
 
 	var err error
 	if owner != "" {
 		// Take a lock on db currentUser to avoid multiple database creation at the same time
 		// It can fail if they grant the same owner to current at the same time as it's not done in transaction.
-		lockTxn, err := startTransaction(db.client, "")
+		lockTxn, err := startTransaction(db.GetClient(), "")
 		if err != nil {
 			return err
 		}
@@ -204,7 +204,7 @@ func createDatabase(db *DBConnection, d *schema.ResourceData) error {
 		fmt.Fprint(b, " TABLESPACE ", pq.QuoteIdentifier(v.(string)))
 	}
 
-	if db.featureSupported(featureDBAllowConnections) {
+	if db.FeatureSupported(featureDBAllowConnections) {
 		val := d.Get(dbAllowConnsAttr).(bool)
 		fmt.Fprint(b, " ALLOW_CONNECTIONS ", val)
 	}
@@ -214,7 +214,7 @@ func createDatabase(db *DBConnection, d *schema.ResourceData) error {
 		fmt.Fprint(b, " CONNECTION LIMIT ", val)
 	}
 
-	if db.featureSupported(featureDBIsTemplate) {
+	if db.FeatureSupported(featureDBIsTemplate) {
 		val := d.Get(dbIsTemplateAttr).(bool)
 		fmt.Fprint(b, " IS_TEMPLATE ", val)
 	}
@@ -229,14 +229,14 @@ func createDatabase(db *DBConnection, d *schema.ResourceData) error {
 	return err
 }
 
-func resourcePostgreSQLDatabaseDelete(db *DBConnection, d *schema.ResourceData) error {
-	currentUser := db.client.config.getDatabaseUsername()
+func resourcePostgreSQLDatabaseDelete(db DatabaseConnection, d *schema.ResourceData) error {
+	currentUser := db.GetClient().config.getDatabaseUsername()
 	owner := d.Get(dbOwnerAttr).(string)
 
 	var dropWithForce string
 	var err error
 	if owner != "" {
-		lockTxn, err := startTransaction(db.client, "")
+		lockTxn, err := startTransaction(db.GetClient(), "")
 		if err := pgLockRole(lockTxn, currentUser); err != nil {
 			return err
 		}
@@ -256,7 +256,7 @@ func resourcePostgreSQLDatabaseDelete(db *DBConnection, d *schema.ResourceData) 
 	}
 
 	dbName := d.Get(dbNameAttr).(string)
-	if db.featureSupported(featureDBIsTemplate) {
+	if db.FeatureSupported(featureDBIsTemplate) {
 		if isTemplate := d.Get(dbIsTemplateAttr).(bool); isTemplate {
 			// Template databases must have this attribute cleared before
 			// they can be dropped.
@@ -276,7 +276,7 @@ func resourcePostgreSQLDatabaseDelete(db *DBConnection, d *schema.ResourceData) 
 	}
 
 	// Drop with force only for psql 13+
-	if db.featureSupported(featureForceDropDatabase) {
+	if db.FeatureSupported(featureForceDropDatabase) {
 		dropWithForce = "WITH ( FORCE )"
 	}
 
@@ -291,8 +291,8 @@ func resourcePostgreSQLDatabaseDelete(db *DBConnection, d *schema.ResourceData) 
 	return err
 }
 
-func resourcePostgreSQLDatabaseExists(db *DBConnection, d *schema.ResourceData) (bool, error) {
-	txn, err := startTransaction(db.client, "")
+func resourcePostgreSQLDatabaseExists(db DatabaseConnection, d *schema.ResourceData) (bool, error) {
+	txn, err := startTransaction(db.GetClient(), "")
 	if err != nil {
 		return false, err
 	}
@@ -301,11 +301,11 @@ func resourcePostgreSQLDatabaseExists(db *DBConnection, d *schema.ResourceData) 
 	return dbExists(txn, d.Id())
 }
 
-func resourcePostgreSQLDatabaseRead(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLDatabaseRead(db DatabaseConnection, d *schema.ResourceData) error {
 	return resourcePostgreSQLDatabaseReadImpl(db, d)
 }
 
-func resourcePostgreSQLDatabaseReadImpl(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLDatabaseReadImpl(db DatabaseConnection, d *schema.ResourceData) error {
 	dbId := d.Id()
 	var dbName, ownerName string
 	err := db.QueryRow("SELECT d.datname, pg_catalog.pg_get_userbyid(d.datdba) from pg_database d WHERE datname=$1", dbId).Scan(&dbName, &ownerName)
@@ -363,7 +363,7 @@ func resourcePostgreSQLDatabaseReadImpl(db *DBConnection, d *schema.ResourceData
 	}
 	d.Set(dbTemplateAttr, dbTemplate)
 
-	if db.featureSupported(featureDBAllowConnections) {
+	if db.FeatureSupported(featureDBAllowConnections) {
 		var dbAllowConns bool
 		dbSQL := fmt.Sprintf(dbSQLFmt, "d.datallowconn")
 		err = db.QueryRow(dbSQL, dbId).Scan(&dbAllowConns)
@@ -374,7 +374,7 @@ func resourcePostgreSQLDatabaseReadImpl(db *DBConnection, d *schema.ResourceData
 		d.Set(dbAllowConnsAttr, dbAllowConns)
 	}
 
-	if db.featureSupported(featureDBIsTemplate) {
+	if db.FeatureSupported(featureDBIsTemplate) {
 		var dbIsTemplate bool
 		dbSQL := fmt.Sprintf(dbSQLFmt, "d.datistemplate")
 		err = db.QueryRow(dbSQL, dbId).Scan(&dbIsTemplate)
@@ -388,7 +388,7 @@ func resourcePostgreSQLDatabaseReadImpl(db *DBConnection, d *schema.ResourceData
 	return nil
 }
 
-func resourcePostgreSQLDatabaseUpdate(db *DBConnection, d *schema.ResourceData) error {
+func resourcePostgreSQLDatabaseUpdate(db DatabaseConnection, d *schema.ResourceData) error {
 	if err := setDBName(db, d); err != nil {
 		return err
 	}
@@ -439,7 +439,7 @@ func setDBName(db QueryAble, d *schema.ResourceData) error {
 	return nil
 }
 
-func setDBOwner(db *DBConnection, d *schema.ResourceData) error {
+func setDBOwner(db DatabaseConnection, d *schema.ResourceData) error {
 	if !d.HasChange(dbOwnerAttr) {
 		return nil
 	}
@@ -448,9 +448,9 @@ func setDBOwner(db *DBConnection, d *schema.ResourceData) error {
 	if owner == "" {
 		return nil
 	}
-	currentUser := db.client.config.getDatabaseUsername()
+	currentUser := db.GetClient().config.getDatabaseUsername()
 
-	lockTxn, err := startTransaction(db.client, "")
+	lockTxn, err := startTransaction(db.GetClient(), "")
 	if err := pgLockRole(lockTxn, currentUser); err != nil {
 		return err
 	}
@@ -512,13 +512,13 @@ func setDBConnLimit(db QueryAble, d *schema.ResourceData) error {
 	return nil
 }
 
-func setDBAllowConns(db *DBConnection, d *schema.ResourceData) error {
+func setDBAllowConns(db DatabaseConnection, d *schema.ResourceData) error {
 	if !d.HasChange(dbAllowConnsAttr) {
 		return nil
 	}
 
-	if !db.featureSupported(featureDBAllowConnections) {
-		return fmt.Errorf("PostgreSQL client is talking with a server (%q) that does not support database ALLOW_CONNECTIONS", db.version.String())
+	if !db.FeatureSupported(featureDBAllowConnections) {
+		return fmt.Errorf("PostgreSQL client is talking with a server (%q) that does not support database ALLOW_CONNECTIONS", db.GetVersion().String())
 	}
 
 	allowConns := d.Get(dbAllowConnsAttr).(bool)
@@ -531,7 +531,7 @@ func setDBAllowConns(db *DBConnection, d *schema.ResourceData) error {
 	return nil
 }
 
-func setDBIsTemplate(db *DBConnection, d *schema.ResourceData) error {
+func setDBIsTemplate(db DatabaseConnection, d *schema.ResourceData) error {
 	if !d.HasChange(dbIsTemplateAttr) {
 		return nil
 	}
@@ -543,9 +543,9 @@ func setDBIsTemplate(db *DBConnection, d *schema.ResourceData) error {
 	return nil
 }
 
-func doSetDBIsTemplate(db *DBConnection, dbName string, isTemplate bool) error {
-	if !db.featureSupported(featureDBIsTemplate) {
-		return fmt.Errorf("PostgreSQL client is talking with a server (%q) that does not support database IS_TEMPLATE", db.version.String())
+func doSetDBIsTemplate(db DatabaseConnection, dbName string, isTemplate bool) error {
+	if !db.FeatureSupported(featureDBIsTemplate) {
+		return fmt.Errorf("PostgreSQL client is talking with a server (%q) that does not support database IS_TEMPLATE", db.GetVersion().String())
 	}
 
 	sql := fmt.Sprintf("ALTER DATABASE %s IS_TEMPLATE %t", pq.QuoteIdentifier(dbName), isTemplate)
@@ -556,10 +556,10 @@ func doSetDBIsTemplate(db *DBConnection, dbName string, isTemplate bool) error {
 	return nil
 }
 
-func terminateBConnections(db *DBConnection, dbName string) error {
+func terminateBConnections(db DatabaseConnection, dbName string) error {
 	var terminateSql string
 
-	if db.featureSupported(featureDBAllowConnections) {
+	if db.FeatureSupported(featureDBAllowConnections) {
 		alterSql := fmt.Sprintf("ALTER DATABASE %s ALLOW_CONNECTIONS false", pq.QuoteIdentifier(dbName))
 
 		if _, err := db.Exec(alterSql); err != nil {
@@ -567,7 +567,7 @@ func terminateBConnections(db *DBConnection, dbName string) error {
 		}
 	}
 	pid := "procpid"
-	if db.featureSupported(featurePid) {
+	if db.FeatureSupported(featurePid) {
 		pid = "pid"
 	}
 	terminateSql = fmt.Sprintf("SELECT pg_terminate_backend(%s) FROM pg_stat_activity WHERE datname = '%s' AND %s <> pg_backend_pid()", pid, dbName, pid)
