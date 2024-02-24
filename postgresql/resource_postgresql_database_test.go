@@ -277,11 +277,12 @@ func checkUserMembership(
 		defer db.Close()
 
 		var _rez int
-		err = db.QueryRow(`
+		err = retry(func() error {
+			return db.QueryRow(`
                        SELECT 1 FROM pg_auth_members
                        WHERE pg_get_userbyid(roleid) = $1 AND pg_get_userbyid(member) = $2
                `, role, member).Scan(&_rez)
-
+		})
 		switch {
 		case err == sql.ErrNoRows:
 			if shouldHaveRole {
@@ -360,7 +361,9 @@ func checkDatabaseExists(client *Client, dbName string) (bool, error) {
 		return false, err
 	}
 	var _rez int
-	err = db.QueryRow("SELECT 1 from pg_database d WHERE datname=$1", dbName).Scan(&_rez)
+	err = retry(func() error {
+		return db.QueryRow("SELECT 1 from pg_database d WHERE datname=$1", dbName).Scan(&_rez)
+	})
 	switch {
 	case err == sql.ErrNoRows:
 		return false, nil

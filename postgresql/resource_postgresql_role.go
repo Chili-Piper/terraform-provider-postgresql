@@ -365,7 +365,9 @@ func resourcePostgreSQLRoleDelete(db DatabaseConnection, d *schema.ResourceData)
 
 func resourcePostgreSQLRoleExists(db DatabaseConnection, d *schema.ResourceData) (bool, error) {
 	var roleName string
-	err := db.QueryRow("SELECT rolname FROM pg_catalog.pg_roles WHERE rolname=$1", d.Id()).Scan(&roleName)
+	err := retry(func() error {
+		return db.QueryRow("SELECT rolname FROM pg_catalog.pg_roles WHERE rolname=$1", d.Id()).Scan(&roleName)
+	})
 	switch {
 	case err == sql.ErrNoRows:
 		return false, nil
@@ -430,7 +432,9 @@ func resourcePostgreSQLRoleReadImpl(db DatabaseConnection, d *schema.ResourceDat
 		// select columns
 		strings.Join(columns, ", "),
 	)
-	err := db.QueryRow(roleSQL, roleID).Scan(values...)
+	err := retry(func() error {
+		return db.QueryRow(roleSQL, roleID).Scan(values...)
+	})
 
 	switch {
 	case err == sql.ErrNoRows:
@@ -576,7 +580,9 @@ func readRolePassword(db DatabaseConnection, d *schema.ResourceData, roleCanLogi
 	}
 
 	var rolePassword string
-	err = db.QueryRow("SELECT COALESCE(passwd, '') FROM pg_catalog.pg_shadow AS s WHERE s.usename = $1", d.Id()).Scan(&rolePassword)
+	err = retry(func() error {
+		return db.QueryRow("SELECT COALESCE(passwd, '') FROM pg_catalog.pg_shadow AS s WHERE s.usename = $1", d.Id()).Scan(&rolePassword)
+	})
 	switch {
 	case err == sql.ErrNoRows:
 		// They don't have a password

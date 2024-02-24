@@ -308,7 +308,9 @@ func resourcePostgreSQLDatabaseRead(db DatabaseConnection, d *schema.ResourceDat
 func resourcePostgreSQLDatabaseReadImpl(db DatabaseConnection, d *schema.ResourceData) error {
 	dbId := d.Id()
 	var dbName, ownerName string
-	err := db.QueryRow("SELECT d.datname, pg_catalog.pg_get_userbyid(d.datdba) from pg_database d WHERE datname=$1", dbId).Scan(&dbName, &ownerName)
+	err := retry(func() error {
+		return db.QueryRow("SELECT d.datname, pg_catalog.pg_get_userbyid(d.datdba) from pg_database d WHERE datname=$1", dbId).Scan(&dbName, &ownerName)
+	})
 	switch {
 	case err == sql.ErrNoRows:
 		log.Printf("[WARN] PostgreSQL database (%q) not found", dbId)
@@ -333,14 +335,16 @@ func resourcePostgreSQLDatabaseReadImpl(db DatabaseConnection, d *schema.Resourc
 		`FROM pg_catalog.pg_database AS d, pg_catalog.pg_tablespace AS ts ` +
 		`WHERE d.datname = $1 AND d.dattablespace = ts.oid`
 	dbSQL := fmt.Sprintf(dbSQLFmt, strings.Join(columns, ", "))
-	err = db.QueryRow(dbSQL, dbId).
-		Scan(
-			&dbEncoding,
-			&dbCollation,
-			&dbCType,
-			&dbTablespaceName,
-			&dbConnLimit,
-		)
+	err = retry(func() error {
+		return db.QueryRow(dbSQL, dbId).
+			Scan(
+				&dbEncoding,
+				&dbCollation,
+				&dbCType,
+				&dbTablespaceName,
+				&dbConnLimit,
+			)
+	})
 	switch {
 	case err == sql.ErrNoRows:
 		log.Printf("[WARN] PostgreSQL database (%q) not found", dbId)
@@ -366,7 +370,9 @@ func resourcePostgreSQLDatabaseReadImpl(db DatabaseConnection, d *schema.Resourc
 	if db.FeatureSupported(featureDBAllowConnections) {
 		var dbAllowConns bool
 		dbSQL := fmt.Sprintf(dbSQLFmt, "d.datallowconn")
-		err = db.QueryRow(dbSQL, dbId).Scan(&dbAllowConns)
+		err = retry(func() error {
+			return db.QueryRow(dbSQL, dbId).Scan(&dbAllowConns)
+		})
 		if err != nil {
 			return fmt.Errorf("Error reading ALLOW_CONNECTIONS property for DATABASE: %w", err)
 		}
@@ -377,7 +383,9 @@ func resourcePostgreSQLDatabaseReadImpl(db DatabaseConnection, d *schema.Resourc
 	if db.FeatureSupported(featureDBIsTemplate) {
 		var dbIsTemplate bool
 		dbSQL := fmt.Sprintf(dbSQLFmt, "d.datistemplate")
-		err = db.QueryRow(dbSQL, dbId).Scan(&dbIsTemplate)
+		err = retry(func() error {
+			return db.QueryRow(dbSQL, dbId).Scan(&dbIsTemplate)
+		})
 		if err != nil {
 			return fmt.Errorf("Error reading IS_TEMPLATE property for DATABASE: %w", err)
 		}

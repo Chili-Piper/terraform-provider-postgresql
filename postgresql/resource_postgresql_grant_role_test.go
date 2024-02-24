@@ -148,14 +148,15 @@ func checkGrantRole(t *testing.T, dsn, role string, grantRole string, withAdmin 
 		defer db.Close()
 
 		var _rez int
-		err = db.QueryRow(`
+		err = retry(func() error {
+			return db.QueryRow(`
 		SELECT 1
 		FROM pg_auth_members
 		WHERE pg_get_userbyid(member) = $1
 		AND pg_get_userbyid(roleid) = $2
 		AND admin_option = $3;
 		`, role, grantRole, withAdmin).Scan(&_rez)
-
+		})
 		switch {
 		case err == sql.ErrNoRows:
 			return fmt.Errorf(

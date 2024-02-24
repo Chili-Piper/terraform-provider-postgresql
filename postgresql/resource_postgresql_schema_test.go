@@ -398,7 +398,9 @@ func testAccCheckSchemaOwner(database, schemaName, expectedOwner string) resourc
 		var owner string
 
 		query := "SELECT pg_catalog.pg_get_userbyid(n.nspowner)  FROM pg_catalog.pg_namespace n WHERE n.nspname=$1"
-		switch err := db.QueryRow(query, schemaName).Scan(&owner); {
+		switch err := retry(func() error {
+			return db.QueryRow(query, schemaName).Scan(&owner)
+		}); {
 		case err == sql.ErrNoRows:
 			return fmt.Errorf("could not find schema %s while checking owner", schemaName)
 		case err != nil:

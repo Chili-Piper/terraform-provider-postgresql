@@ -284,7 +284,9 @@ func checkRoleExists(client *Client, roleName string) (bool, error) {
 		return false, err
 	}
 	var _rez int
-	err = db.QueryRow("SELECT 1 from pg_roles d WHERE rolname=$1", roleName).Scan(&_rez)
+	err = retry(func() error {
+		db.QueryRow("SELECT 1 from pg_roles d WHERE rolname=$1", roleName).Scan(&_rez)
+	})
 	switch {
 	case err == sql.ErrNoRows:
 		return false, nil
@@ -352,10 +354,12 @@ func checkSearchPath(client *Client, roleName string, expectedSearchPath []strin
 	}
 
 	var searchPathStr string
-	err = db.QueryRow(
-		"SELECT (pg_options_to_table(rolconfig)).option_value FROM pg_roles WHERE rolname=$1;",
-		roleName,
-	).Scan(&searchPathStr)
+	err = retry(func() error {
+		return db.QueryRow(
+			"SELECT (pg_options_to_table(rolconfig)).option_value FROM pg_roles WHERE rolname=$1;",
+			roleName,
+		).Scan(&searchPathStr)
+	})
 
 	// The query returns ErrNoRows if the search path hasn't been altered.
 	if err != nil && err == sql.ErrNoRows {

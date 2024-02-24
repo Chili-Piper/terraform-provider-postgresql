@@ -136,7 +136,9 @@ func readGrantRole(db QueryAble, d *schema.ResourceData) error {
 		&withAdminOption,
 	}
 
-	err := db.QueryRow(getGrantRoleQuery, d.Get("role"), d.Get("grant_role")).Scan(values...)
+	err := retry(func() error {
+		return db.QueryRow(getGrantRoleQuery, d.Get("role"), d.Get("grant_role")).Scan(values...)
+	})
 	switch {
 	case err == sql.ErrNoRows:
 		log.Printf("[WARN] PostgreSQL grant role (%q) not found", grantRoleID)

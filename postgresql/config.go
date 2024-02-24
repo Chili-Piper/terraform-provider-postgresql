@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"net/url"
 	"strconv"
 	"strings"
@@ -152,7 +151,9 @@ func (db *DBConnection) featureSupported(name featureName) bool {
 func (db *DBConnection) isSuperuser() (bool, error) {
 	var superuser bool
 
-	if err := db.QueryRow("SELECT rolsuper FROM pg_roles WHERE rolname = CURRENT_USER").Scan(&superuser); err != nil {
+	if err := retry(func() error {
+		return db.QueryRow("SELECT rolsuper FROM pg_roles WHERE rolname = CURRENT_USER").Scan(&superuser)
+	}); err != nil {
 		return false, fmt.Errorf("could not check if current user is superuser: %w", err)
 	}
 
@@ -275,14 +276,8 @@ func (c *Config) getDatabaseUsername() string {
 	return c.Username
 }
 
-// Retry connection to PostgreSQL server 5 times
-const connectionRetries = 5
-
 func (c *Client) retryConnect(dsn string) (*sql.DB, error) {
-	var db *sql.DB
-	var err error
-
-	for i := int64(0); i < connectionRetries; i++ {
+	db, err := retryWithData(func() (db *sql.DB, err error) {
 		if c.config.Scheme == "postgres" {
 			db, err = sql.Open(proxyDriverName, dsn)
 		} else {
@@ -291,16 +286,14 @@ func (c *Client) retryConnect(dsn string) (*sql.DB, error) {
 		if err == nil {
 			err = db.Ping()
 		}
-		if err != nil {
-			errString := strings.Replace(err.Error(), c.config.Password, "XXXX", 2)
-			if i > connectionRetries {
-				return nil, fmt.Errorf("error connecting to PostgreSQL server %s (scheme: %s): %s", c.config.Host, c.config.Scheme, errString)
-			}
-			tflog.Warn(context.Background(), fmt.Sprintf("attempt %d/%d: Error connecting to PostgreSQL server %s (scheme: %s): %s", i+1, connectionRetries, c.config.Host, c.config.Scheme, errString))
-			continue
-		}
-		break
+		return
+	})
+
+	if err != nil {
+		errString := strings.Replace(err.Error(), c.config.Password, "XXXX", 2)
+		return nil, fmt.Errorf("error connecting to PostgreSQL server %s (scheme: %s): %s", c.config.Host, c.config.Scheme, errString)
 	}
+
 	return db, nil
 }
 
@@ -355,7 +348,9 @@ func (c *Client) Connect() (DatabaseConnection, error) {
 // capabilities.  This is only run once per Client.
 func fingerprintCapabilities(db *sql.DB) (*semver.Version, error) {
 	var pgVersion string
-	err := db.QueryRow(`SELECT VERSION()`).Scan(&pgVersion)
+	err := retry(func() error {
+		return db.QueryRow(`SELECT VERSION()`).Scan(&pgVersion)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("error PostgreSQL version: %w", err)
 	}
