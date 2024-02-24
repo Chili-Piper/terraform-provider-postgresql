@@ -40,7 +40,9 @@ func resourcePostgreSQLPhysicalReplicationSlotCreate(db DatabaseConnection, d *s
 func resourcePostgreSQLPhysicalReplicationSlotExists(db DatabaseConnection, d *schema.ResourceData) (bool, error) {
 	query := "SELECT 1 FROM pg_catalog.pg_replication_slots WHERE slot_name = $1 and slot_type = 'physical'"
 	var unused int
-	err := db.QueryRow(query, d.Id()).Scan(&unused)
+	err := retry(func() error {
+		return db.QueryRow(query, d.Id()).Scan(&unused)
+	})
 	switch {
 	case err == sql.ErrNoRows:
 		return false, nil

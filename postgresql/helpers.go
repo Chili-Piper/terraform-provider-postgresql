@@ -56,10 +56,9 @@ func pqQuoteLiteral(in string) string {
 
 func isMemberOfRole(db QueryAble, role, member string) (bool, error) {
 	var _rez int
-	err := db.QueryRow(
-		"SELECT 1 FROM pg_auth_members WHERE pg_get_userbyid(roleid) = $1 AND pg_get_userbyid(member) = $2",
-		role, member,
-	).Scan(&_rez)
+	err := retry(func() error {
+		return db.QueryRow("SELECT 1 FROM pg_auth_members WHERE pg_get_userbyid(roleid) = $1 AND pg_get_userbyid(member) = $2", role, member).Scan(&_rez)
+	})
 
 	switch {
 	case err == sql.ErrNoRows:
@@ -351,7 +350,9 @@ func startTransaction(client *Client, database string) (*sql.Tx, error) {
 }
 
 func dbExists(db QueryAble, dbname string) (bool, error) {
-	err := db.QueryRow("SELECT datname FROM pg_database WHERE datname=$1", dbname).Scan(&dbname)
+	err := retry(func() error {
+		return db.QueryRow("SELECT datname FROM pg_database WHERE datname=$1", dbname).Scan(&dbname)
+	})
 	switch {
 	case err == sql.ErrNoRows:
 		return false, nil
@@ -388,7 +389,9 @@ func schemaExists(txn *sql.Tx, schemaname string) (bool, error) {
 
 func getCurrentUser(db QueryAble) (string, error) {
 	var currentUser string
-	err := db.QueryRow("SELECT CURRENT_USER").Scan(&currentUser)
+	err := retry(func() error {
+		return db.QueryRow("SELECT CURRENT_USER").Scan(&currentUser)
+	})
 	switch {
 	case err == sql.ErrNoRows:
 		return "", fmt.Errorf("SELECT CURRENT_USER returns now row, this is quite disturbing")
@@ -437,7 +440,9 @@ SELECT rolname
 `, dbQueryString)
 	var owner string
 
-	err := db.QueryRow(query, dbQueryValues...).Scan(&owner)
+	err := retry(func() error {
+		return db.QueryRow(query, dbQueryValues...).Scan(&owner)
+	})
 	switch {
 	case err == sql.ErrNoRows:
 		return "", fmt.Errorf("could not find database '%s' while looking for owner", database)
@@ -456,7 +461,9 @@ SELECT rolname
 `
 	var owner string
 
-	err := db.QueryRow(query, schemaName).Scan(&owner)
+	err := retry(func() error {
+		return db.QueryRow(query, schemaName).Scan(&owner)
+	})
 	switch {
 	case err == sql.ErrNoRows:
 		return "", fmt.Errorf("could not find schema '%s' while looking for owner", schemaName)
@@ -507,7 +514,9 @@ func resolveOwners(db QueryAble, owners []string) ([]string, error) {
 func isSuperuser(db QueryAble, role string) (bool, error) {
 	var superuser bool
 
-	if err := db.QueryRow("SELECT rolsuper FROM pg_roles WHERE rolname = $1", role).Scan(&superuser); err != nil {
+	if err := retry(func() error {
+		return db.QueryRow("SELECT rolsuper FROM pg_roles WHERE rolname = $1", role).Scan(&superuser)
+	}); err != nil {
 		return false, fmt.Errorf("could not check if role %s is superuser: %w", role, err)
 	}
 
@@ -522,7 +531,9 @@ func getRoleOID(db QueryAble, role string) (uint32, error) {
 	}
 
 	var oid uint32
-	if err := db.QueryRow("SELECT oid FROM pg_roles WHERE rolname = $1", role).Scan(&oid); err != nil {
+	if err := retry(func() error {
+		return db.QueryRow("SELECT oid FROM pg_roles WHERE rolname = $1", role).Scan(&oid)
+	}); err != nil {
 		return 0, fmt.Errorf("could not find oid for role %s: %w", role, err)
 	}
 	return oid, nil
