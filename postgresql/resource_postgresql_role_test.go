@@ -285,7 +285,7 @@ func checkRoleExists(client *Client, roleName string) (bool, error) {
 	}
 	var _rez int
 	err = retry(func() error {
-		db.QueryRow("SELECT 1 from pg_roles d WHERE rolname=$1", roleName).Scan(&_rez)
+		return db.QueryRow("SELECT 1 from pg_roles d WHERE rolname=$1", roleName).Scan(&_rez)
 	})
 	switch {
 	case err == sql.ErrNoRows:
