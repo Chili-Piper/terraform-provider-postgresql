@@ -16,6 +16,21 @@ linters:
       - linters:
           - errcheck
         text: Error return value of `d.Set` is not checked
+      - linters:
+          - staticcheck
+        path: '^postgresql/(data_source|resource)_postgresql_.*\.go$'
+        text: '^SA1019: \(github\.com/hashicorp/terraform-plugin-sdk/v2/helper/schema\.Resource\)\.(Create|Read|Update|Delete|Exists) is deprecated:'
+        source: '^\s*((Create|Read|Update|Delete):\s*PGResourceFunc|Exists:\s*PGResourceExistsFunc)\('
+      - linters:
+          - staticcheck
+        path: '^postgresql/provider\.go$'
+        text: '^SA1019: \(github\.com/hashicorp/terraform-plugin-sdk/v2/helper/schema\.Provider\)\.ConfigureFunc is deprecated:'
+        source: '^\s*ConfigureFunc:\s*providerConfigure,'
+      - linters:
+          - staticcheck
+        path: '^postgresql/.*_test\.go$'
+        text: '^SA1019: \(github\.com/hashicorp/terraform-plugin-sdk/v2/helper/resource\.TestCase\)\.Providers is deprecated:'
+        source: '^\s*Providers:\s*testAccProviders,'
     paths:
       - third_party$
       - builtin$
