@@ -1,5 +1,22 @@
-issues:
-  exclude-rules:
-    - linters:
-        - errcheck
-      text: "Error return value of `d.Set` is not checked"
+version: "2"
+linters:
+  settings:
+    staticcheck:
+      checks:
+        - S*
+        - SA*
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+        text: Error return value of `d.Set` is not checked
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
