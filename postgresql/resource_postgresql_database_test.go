@@ -8,8 +8,54 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
+
+type failedTransactionConnection struct {
+	DatabaseConnection
+	client *Client
+	err    error
+}
+
+func (db *failedTransactionConnection) GetClient() *Client {
+	return db.client
+}
+
+func (db *failedTransactionConnection) Begin() (*sql.Tx, error) {
+	return nil, db.err
+}
+
+func TestPostgresqlDatabaseTransactionFailure(t *testing.T) {
+	for name, operation := range map[string]func(DatabaseConnection, *schema.ResourceData) error{
+		"delete": resourcePostgreSQLDatabaseDelete,
+		"owner":  setDBOwner,
+	} {
+		t.Run(name, func(t *testing.T) {
+			config := Config{Scheme: "test", Username: "transaction-test"}
+			client := config.NewClient(t.Name())
+			wantErr := errors.New("transaction failed")
+			db := &failedTransactionConnection{client: client, err: wantErr}
+			dsn := config.connStr(client.databaseName)
+			dbRegistryLock.Lock()
+			dbRegistry[dsn] = db
+			dbRegistryLock.Unlock()
+			t.Cleanup(func() {
+				dbRegistryLock.Lock()
+				delete(dbRegistry, dsn)
+				dbRegistryLock.Unlock()
+			})
+
+			data := schema.TestResourceDataRaw(t, resourcePostgreSQLDatabase().Schema, map[string]interface{}{
+				dbNameAttr:  "testdb",
+				dbOwnerAttr: "owner",
+			})
+			if err := operation(db, data); !errors.Is(err, wantErr) {
+				t.Fatalf("expected transaction error, got %v", err)
+			}
+		})
+	}
+}
 
 func TestAccPostgresqlDatabase_Basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{

@@ -237,6 +237,9 @@ func resourcePostgreSQLDatabaseDelete(db DatabaseConnection, d *schema.ResourceD
 	var err error
 	if owner != "" {
 		lockTxn, err := startTransaction(db.GetClient(), "")
+		if err != nil {
+			return err
+		}
 		if err := pgLockRole(lockTxn, currentUser); err != nil {
 			return err
 		}
@@ -459,6 +462,9 @@ func setDBOwner(db DatabaseConnection, d *schema.ResourceData) error {
 	currentUser := db.GetClient().config.getDatabaseUsername()
 
 	lockTxn, err := startTransaction(db.GetClient(), "")
+	if err != nil {
+		return err
+	}
 	if err := pgLockRole(lockTxn, currentUser); err != nil {
 		return err
 	}
